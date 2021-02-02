@@ -6,9 +6,13 @@ plugins {
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
 
-archivesBaseName = project.archives_base_name
-version = project.mod_version
+archivesBaseName = project.mod_name
+version = project.minecraft_version + "-" + project.mod_version
 group = project.maven_group
+
+minecraft {
+	accessWidener "src/main/resources/${project.mod_name}.accesswidener"
+}
 
 dependencies {
 	// To change the versions see the gradle.properties file
@@ -21,6 +25,7 @@ dependencies {
 
 	// PSA: Some older mods, compiled on Loom 0.2.1, might have outdated Maven POMs.
 	// You may need to force-disable transitiveness on them.
+	modRuntime "io.github.ultimateboomer:smoothboot-fabric:${project.smoothboot_version}"
 }
 
 processResources {
