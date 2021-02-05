@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MemFix implements ModInitializer {
     public static final String MOD_NAME = "MemFix";
@@ -38,9 +39,11 @@ public class MemFix implements ModInitializer {
 
     public static final Set<NativeImage> closeOnReload = Sets.newConcurrentHashSet();
 
+    public static AtomicBoolean textureLoaded = new AtomicBoolean();
+
 //    public static final Map<Long, Queue<Long>> pointerPool = Maps.newConcurrentMap();
 
-    public static NativeImagePool nativeImagePool;
+//    public static NativeImagePool nativeImagePool;
 
     public static CompletableFuture<Void> exportImagesFuture = null;
 
@@ -48,7 +51,7 @@ public class MemFix implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        nativeImagePool = new NativeImagePool(1L << 32);
+//        nativeImagePool = new NativeImagePool(1L << 32);
 
         KeyBinding keyDebug = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.memfix.test",
                 InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, "category.memfix"));
@@ -62,100 +65,14 @@ public class MemFix implements ModInitializer {
     }
 
     public static void test(MinecraftClient client) {
-//        nativeImagePool.compress();
-//        int pointerPoolSize = 0;
-//        try {
-//            pointerPoolSize = CompletableFuture.supplyAsync(() -> pointerPool.values().parallelStream()
-//                    .mapToInt(value -> value.size()).sum()).get();
-//        } catch (Exception e) {
-//            throw new IllegalStateException(e);
-//        }
-
-//        long nativeImageSize = 0;
-//        try {
-//            nativeImageSize = CompletableFuture.supplyAsync(() -> nativeImageList.parallelStream().mapToLong(value ->
-//                    value.getWidth() * value.getHeight()).sum(), Util.getMainWorkerExecutor()).get();
-//        } catch (Exception e) {
-//            throw new IllegalStateException(e);
-//        }
-
-//        Deque<ByteBuffer> queue = new ArrayDeque<>();
-//        for (int i = 0; i < 1 << 20; i++) {
-//            int size = RandomUtils.nextInt(1 << 4, 1 << 12);
-//            ByteBuffer buf = MemoryUtil.memAlloc(size);
-//            buf.put(RandomUtils.nextBytes(size));
-//            queue.add(buf);
-//            if (queue.size() > 1 << 12) {
-//                MemoryUtil.memFree(queue.pollFirst());
-//            }
-////            LOGGER.info("{}, {}", i, size);
-//        }
-//        MemoryUtil.memReport((address, memory, threadId, threadName, stacktrace) -> {
-//            LOGGER.info("{} {} {} {] {}", address, memory, threadId, threadName, stacktrace);
-//        });
-//        try {
-//            Thread.sleep(3000);
-//        } catch (InterruptedException e) {
-//
-//        }
-
-
-//        queue.forEach(byteBuffer -> MemoryUtil.memFree(byteBuffer));
-//        queue.clear();
-
-//		exportTextures(client.runDirectory);
-
-//		try {
-//			MemFix.LOGGER.info("Allocating image");
-//			NativeImage image = new NativeImage(NativeImage.Format.ABGR, 8192, 8192, false);
-//			image.fillRect(0, 0, image.getWidth(), image.getHeight(), 0xFFFFFFFF);
-//
-//			MemFix.LOGGER.info("Calling getBytes");
-//			for (int i = 0; i < 100; i++) {
-//				int x = image.getBytes().length;
-//			}
-//
-//			image.close();
-//		} catch (IOException e) {
-//			throw new IllegalStateException(e);
-//		}
-
-//		try {
-//			for (NativeImage image : nativeImageList) {
-//				image.getBytes();
-//			}
-//		} catch (Exception e) {
-//			throw new IllegalStateException(e);
-//		}
-
-//		for (NativeImage image : nativeImageList) {
-//			image.close();
-//		}
-
-//		nativeImageList.parallelStream().forEach(image -> image.close());
-
-//		try {
-//			WritableByteChannel channel = Channels.newChannel(NullOutputStream.NULL_OUTPUT_STREAM);
-//			for (NativeImage image : nativeImageList) {
-//				image.write(channel);
-//			}
-//			channel.close();
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-
-//		MemFix.LOGGER.info("Complete");
-
-//        nativeImagePool.resize();
-
-        NativeImagePool.PooledNativeImage last = nativeImagePool.pooledNativeImageSet.last();
+//        NativeImagePool.PooledNativeImage last = nativeImagePool.pooledNativeImageSet.last();
 
         client.player.sendMessage(new LiteralText(
                 String.format("NativeImage count: %d", nativeImageList.size())), false);
-        client.player.sendMessage(new LiteralText(
-                String.format("Pool size: %d", nativeImagePool.poolSize)), false);
-        client.player.sendMessage(new LiteralText(
-                String.format("Pool fill: %d", last.offset + last.sizeBytes)), false);
+//        client.player.sendMessage(new LiteralText(
+//                String.format("Pool size: %d", nativeImagePool.poolSize)), false);
+//        client.player.sendMessage(new LiteralText(
+//                String.format("Pool fill: %d", last.offset + last.sizeBytes)), false);
 //        client.player.sendMessage(new LiteralText(
 //                String.format("NativeImage total size: %d", nativeImageSize)), false);
 //        client.player.sendMessage(new LiteralText(
