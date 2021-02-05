@@ -69,6 +69,7 @@ public class MemFix implements ModInitializer {
 
         client.player.sendMessage(new LiteralText(
                 String.format("NativeImage count: %d", nativeImageList.size())), false);
+        exportTextures(client.runDirectory);
 //        client.player.sendMessage(new LiteralText(
 //                String.format("Pool size: %d", nativeImagePool.poolSize)), false);
 //        client.player.sendMessage(new LiteralText(

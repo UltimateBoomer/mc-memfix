@@ -5,6 +5,7 @@ import net.minecraft.client.texture.NativeImage;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,9 +21,11 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 @Mixin(NativeImage.class)
 public class NativeImageMixin {
-    @Shadow @Final private long sizeBytes;
+    @Shadow @Final
+    private long sizeBytes;
 
-    @Shadow public long pointer;
+    @Shadow
+    public long pointer;
 
     @Unique
     public long offset;
@@ -59,6 +62,7 @@ public class NativeImageMixin {
 
             while (offset == -1) {
                 resize();
+                offset = findAddress(size);
             }
         }
 
@@ -95,6 +99,10 @@ public class NativeImageMixin {
         boolean found = false;
 
         for (NativeImage image : pooledNativeImageSet) {
+            if (image.pointer == 0) {
+                continue;
+            }
+
             blockEnd = ((NativeImageMixin) (Object) image).offset;
 
             if (blockEnd - blockAddress > size) {
@@ -153,7 +161,7 @@ public class NativeImageMixin {
     @Redirect(method = "<init>(Lnet/minecraft/client/texture/NativeImage$Format;IIZ)V",
             at = @At(value = "INVOKE", target = "Lorg/lwjgl/system/MemoryUtil;nmemAlloc(J)J"))
     private long onInit(long size) {
-        initImage(size, true, (byte) 0);
+        initImage(size, false, (byte) 0);
         pooledNativeImageSet.add(((NativeImage) (Object) this));
         return this.pointer;
     }
@@ -161,7 +169,7 @@ public class NativeImageMixin {
     @Redirect(method = "<init>(Lnet/minecraft/client/texture/NativeImage$Format;IIZ)V",
             at = @At(value = "INVOKE", target = "Lorg/lwjgl/system/MemoryUtil;nmemCalloc(JJ)J"))
     private long onInit(long num, long size) {
-        initImage(size, true, (byte) 1);
+        initImage(size, true, (byte) 0);
         pooledNativeImageSet.add(((NativeImage) (Object) this));
         return this.pointer;
     }
@@ -186,26 +194,24 @@ public class NativeImageMixin {
         throw new UnsupportedOperationException();
     }
 
-    @Inject(method = "close", at = @At("HEAD"))
-    private void onClose(CallbackInfo ci) {
-        MemFix.nativeImageList.remove(this);
-    }
+//    @Inject(method = "close", at = @At("HEAD"))
+//    private void onClose(CallbackInfo ci) {
+//        MemFix.nativeImageList.remove(this);
+//    }
 
-
-    /**
-     * @author UltimateBoomer
-     */
-    @Overwrite
-    public void close() {
+    @Inject(method = "close", at = @At("HEAD"), cancellable = true)
+    public void close(CallbackInfo ci) {
         this.offset = -1;
         this.pointer = 0;
 
-        pooledNativeImageSet.remove(this);
+        //pooledNativeImageSet.remove(this);
         MemFix.nativeImageList.remove(this);
+        ci.cancel();
     }
 
     private void markClosed() {
         this.pointer = 0;
+        MemFix.nativeImageList.remove(this);
     }
 
     public void recalculatePointer() {
@@ -226,32 +232,41 @@ public class NativeImageMixin {
         } else if (MemoryUtil.memAddress(buffer) == 0L) {
             throw new IllegalArgumentException("Invalid buffer");
         } else {
-            MemoryStack stack = MemoryStack.stackPush();
-            NativeImage image;
-            try {
-                IntBuffer w = stack.mallocInt(1);
-                IntBuffer h = stack.mallocInt(1);
-                IntBuffer f = stack.mallocInt(1);
-                ByteBuffer imageBuffer = STBImage.stbi_load_from_memory(buffer, w, h, f,
-                        format == null ? 0 : format.getChannelCount());
-                if (imageBuffer == null) {
-                    throw new IOException("Could not load image: " + STBImage.stbi_failure_reason());
+            synchronized (NativeImage.class) {
+                MemoryStack stack = MemoryStack.stackPush();
+                NativeImage image;
+                try {
+                    IntBuffer w = stack.mallocInt(1);
+                    IntBuffer h = stack.mallocInt(1);
+                    IntBuffer f = stack.mallocInt(1);
+                    ByteBuffer imageBuffer = STBImage.stbi_load_from_memory(buffer, w, h, f,
+                            format == null ? 0 : format.getChannelCount());
+                    if (imageBuffer == null) {
+                        throw new IOException("Could not load image: " + STBImage.stbi_failure_reason());
+                    }
+                    long imageAddress = MemoryUtil.memAddress(imageBuffer);
+
+                    image = new NativeImage(format == null ? NativeImage.Format.getFormat(f.get(0)) :
+                            format, w.get(0), h.get(0), true);
+
+                    MemoryUtil.memCopy(imageAddress, poolPointer + ((NativeImageMixin) (Object) image).offset,
+                            image.sizeBytes);
+
+                    STBImage.stbi_image_free(imageBuffer);
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                } finally {
+                    stack.close();
                 }
-                long imageAddress = MemoryUtil.memAddress(imageBuffer);
 
-                image = new NativeImage(format == null ? NativeImage.Format.getFormat(f.get(0)) :
-                        format, w.get(0), h.get(0), true);
-
-                MemoryUtil.memCopy(imageAddress, image.pointer, image.sizeBytes);
-
-                STBImage.stbi_image_free(imageBuffer);
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            } finally {
-                stack.close();
+                return image;
             }
-
-            return image;
         }
+    }
+
+    @Redirect(method = "*", at = @At(value = "FIELD",
+            target = "Lnet/minecraft/client/texture/NativeImage;pointer:J", opcode = Opcodes.GETFIELD))
+    private long onGetPointer(NativeImage image) {
+        return poolPointer + this.offset;
     }
 }
