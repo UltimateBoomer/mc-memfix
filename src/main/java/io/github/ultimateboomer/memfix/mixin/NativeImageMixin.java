@@ -10,12 +10,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(NativeImage.class)
-public abstract class NativeImageMixin {
+public class NativeImageMixin {
     @Shadow @Final private long sizeBytes;
 
     @Shadow public long pointer;
 
-    private boolean willClose = true;
+//    public boolean closeOnReload = false;
+
+//    private boolean willClose = true;
 
     @Inject(method = "<init>*", at = @At(value = "FIELD",
             target = "Lnet/minecraft/client/texture/NativeImage;pointer:J"))

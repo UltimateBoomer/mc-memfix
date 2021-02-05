@@ -36,6 +36,8 @@ public class MemFix implements ModInitializer {
 
     public static final Set<NativeImage> nativeImageList = Sets.newConcurrentHashSet();
 
+    public static final Set<NativeImage> closeOnReload = Sets.newConcurrentHashSet();
+
 //    public static final Map<Long, Queue<Long>> pointerPool = Maps.newConcurrentMap();
 
     public static NativeImagePool nativeImagePool;
@@ -60,6 +62,7 @@ public class MemFix implements ModInitializer {
     }
 
     public static void test(MinecraftClient client) {
+//        nativeImagePool.compress();
 //        int pointerPoolSize = 0;
 //        try {
 //            pointerPoolSize = CompletableFuture.supplyAsync(() -> pointerPool.values().parallelStream()
@@ -143,8 +146,16 @@ public class MemFix implements ModInitializer {
 
 //		MemFix.LOGGER.info("Complete");
 
+//        nativeImagePool.resize();
+
+        NativeImagePool.PooledNativeImage last = nativeImagePool.pooledNativeImageSet.last();
+
         client.player.sendMessage(new LiteralText(
                 String.format("NativeImage count: %d", nativeImageList.size())), false);
+        client.player.sendMessage(new LiteralText(
+                String.format("Pool size: %d", nativeImagePool.poolSize)), false);
+        client.player.sendMessage(new LiteralText(
+                String.format("Pool fill: %d", last.offset + last.sizeBytes)), false);
 //        client.player.sendMessage(new LiteralText(
 //                String.format("NativeImage total size: %d", nativeImageSize)), false);
 //        client.player.sendMessage(new LiteralText(

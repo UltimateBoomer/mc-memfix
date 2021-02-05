@@ -16,9 +16,8 @@ import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class NativeImagePool implements AutoCloseable {
-    public final long poolPointer;
-
-    public long poolSize;
+    protected long poolPointer;
+    protected long poolSize;
 
     public final SortedSet<PooledNativeImage> pooledNativeImageSet = new ConcurrentSkipListSet<>(
             Comparator.comparingLong(o -> o.pointer));
@@ -30,46 +29,102 @@ public class NativeImagePool implements AutoCloseable {
         for (long i = poolPointer; i < poolPointer + poolSize; ++i) {
             MemoryUtil.memPutByte(i, (byte) 0);
         }
-//        try {
-//            CompletableFuture.runAsync(() -> LongStream.range(poolPointer, poolPointer + poolSize).parallel().forEach(
-//                    i -> MemoryUtil.memPutByte(i, (byte) 0))).get();
-//        } catch (Exception e) {
-//            throw new IllegalStateException(e);
-//        }
     }
 
-    public synchronized long allocate(long size) {
-        // Find address to allocate
-        if (pooledNativeImageSet.isEmpty()) {
-            return poolPointer;
+    private synchronized long allocate(long size) {
+        long offset = findAddress(size);
+
+        if (offset == -1) {
+            // Remove gaps in allocation
+            compress();
+            offset = findAddress(size);
+
+            while (offset == -1) {
+                resize();
+            }
         }
 
-        long blockAddress = poolPointer;
+        return offset;
+    }
+
+    public synchronized void resize() {
+        long oldSize = poolSize;
+        poolSize = poolSize << 1;
+        MemFix.LOGGER.warn("Resizing pool to {} bytes", poolSize);
+
+        long old = poolPointer;
+        poolPointer = MemoryUtil.nmemRealloc(poolPointer, poolSize);
+
+        if (poolPointer != old) {
+            pooledNativeImageSet.forEach(PooledNativeImage::recalculatePointer);
+        }
+
+        for (long i = poolPointer + oldSize; i < poolPointer + poolSize; ++i) {
+            MemoryUtil.memPutByte(i, (byte) 0);
+        }
+    }
+
+    private synchronized long findAddress(long size) {
+        // Find address to allocate
+        if (pooledNativeImageSet.isEmpty()) {
+            return 0;
+        }
+
+        long blockAddress = 0;
         long blockEnd;
         boolean found = false;
 
         for (PooledNativeImage image : pooledNativeImageSet) {
-            blockEnd = image.pointer;
+            blockEnd = image.offset;
 
             if (blockEnd - blockAddress > size) {
                 found = true;
                 break;
             }
 
-            blockAddress = image.pointer + image.sizeBytes;
+            blockAddress = image.offset + image.sizeBytes;
         }
 
-        blockEnd = poolPointer + poolSize;
+        if (!found) {
+            blockEnd = poolSize;
 
-        if (blockEnd - blockAddress > size) {
-            found = true;
+            if (blockEnd - blockAddress > size) {
+                found = true;
+            }
         }
 
         if (found) {
             return blockAddress;
         } else {
-            return 0;
+            return -1;
         }
+    }
+
+    public synchronized void compress() {
+        MemFix.LOGGER.info("Compressing pool");
+
+        long offset = 0;
+        for (PooledNativeImage image : pooledNativeImageSet) {
+            if (image.offset != offset) {
+                MemoryStack stack = MemoryStack.stackPush();
+                long tmp = stack.nmalloc((int) image.sizeBytes);
+
+                MemoryUtil.memCopy(image.pointer, tmp, image.sizeBytes);
+                MemoryUtil.memCopy(tmp, this.poolPointer + offset, image.sizeBytes);
+
+                image.offset = offset;
+                image.recalculatePointer();
+
+                stack.pop();
+
+            }
+            offset += image.sizeBytes;
+        }
+    }
+
+    public synchronized void clear() {
+        pooledNativeImageSet.forEach(PooledNativeImage::markClosed);
+        pooledNativeImageSet.clear();
     }
 
     public PooledNativeImage read(NativeImage.Format format, InputStream inputStream) throws IOException {
@@ -121,16 +176,14 @@ public class NativeImagePool implements AutoCloseable {
                 err = var17;
                 throw var17;
             } finally {
-                if (stack != null) {
-                    if (err != null) {
-                        try {
-                            stack.close();
-                        } catch (Throwable var16) {
-                            err.addSuppressed(var16);
-                        }
-                    } else {
+                if (err != null) {
+                    try {
                         stack.close();
+                    } catch (Throwable var16) {
+                        err.addSuppressed(var16);
                     }
+                } else {
+                    stack.close();
                 }
 
             }
@@ -147,30 +200,42 @@ public class NativeImagePool implements AutoCloseable {
     }
 
     public class PooledNativeImage extends NativeImage {
+        public long offset;
+
         public PooledNativeImage(int width, int height, boolean useStb) {
             this(Format.ABGR, width, height, useStb);
         }
 
         public PooledNativeImage(NativeImage.Format format, int width, int height, boolean useStb) {
             super(format, width, height, useStb, 0);
-            this.pointer = allocate(this.sizeBytes);
+            this.offset = allocate(this.sizeBytes);
 
-            if (this.pointer == 0) {
+            if (this.offset == -1) {
                 throw new IllegalStateException("NativeImagePool out of memory");
             }
+
+            recalculatePointer();
 
             pooledNativeImageSet.add(this);
         }
 
         @Override
         public void close() {
+            this.offset = -1;
             this.pointer = 0;
 
             pooledNativeImageSet.remove(this);
+            MemFix.nativeImageList.remove(this);
         }
 
         protected void markClosed() {
             this.pointer = 0;
+        }
+
+        public void recalculatePointer() {
+            if (offset != -1) {
+                this.pointer = poolPointer + this.offset;
+            }
         }
     }
 }
