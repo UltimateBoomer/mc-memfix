@@ -41,9 +41,6 @@ public class MemFix implements ModInitializer {
 
     public static AtomicBoolean textureLoaded = new AtomicBoolean();
 
-//    public static final Map<Long, Queue<Long>> pointerPool = Maps.newConcurrentMap();
-
-//    public static NativeImagePool nativeImagePool;
 
     public static CompletableFuture<Void> exportImagesFuture = null;
 
@@ -52,7 +49,6 @@ public class MemFix implements ModInitializer {
     @Override
     public void onInitialize() {
 //        nativeImagePool = new NativeImagePool(1L << 32);
-
         KeyBinding keyDebug = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.memfix.test",
                 InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, "category.memfix"));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -66,18 +62,11 @@ public class MemFix implements ModInitializer {
 
     public static void test(MinecraftClient client) {
 //        NativeImagePool.PooledNativeImage last = nativeImagePool.pooledNativeImageSet.last();
+//        exportTextures(client.runDirectory)
 
         client.player.sendMessage(new LiteralText(
                 String.format("NativeImage count: %d", nativeImageList.size())), false);
-        exportTextures(client.runDirectory);
-//        client.player.sendMessage(new LiteralText(
-//                String.format("Pool size: %d", nativeImagePool.poolSize)), false);
-//        client.player.sendMessage(new LiteralText(
-//                String.format("Pool fill: %d", last.offset + last.sizeBytes)), false);
-//        client.player.sendMessage(new LiteralText(
-//                String.format("NativeImage total size: %d", nativeImageSize)), false);
-//        client.player.sendMessage(new LiteralText(
-//                String.format("Num of free pointers: %d", pointerPoolSize)), false);
+//        exportTextures(client.runDirectory);
     }
 
     public static CompletableFuture<Void> exportTextures(File runDirectory) {
