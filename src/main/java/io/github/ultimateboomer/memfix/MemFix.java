@@ -41,6 +41,7 @@ public class MemFix implements ModInitializer {
 
     public static AtomicBoolean textureLoaded = new AtomicBoolean();
 
+    public static MemoryPool sharedMemoryPool;
 
     public static CompletableFuture<Void> exportImagesFuture = null;
 
@@ -48,7 +49,8 @@ public class MemFix implements ModInitializer {
 
     @Override
     public void onInitialize() {
-//        nativeImagePool = new NativeImagePool(1L << 32);
+        sharedMemoryPool = new MemoryPool(1L << 32);
+
         KeyBinding keyDebug = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.memfix.test",
                 InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, "category.memfix"));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

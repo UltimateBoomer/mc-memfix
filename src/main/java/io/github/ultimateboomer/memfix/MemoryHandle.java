@@ -4,5 +4,13 @@ public interface MemoryHandle {
     long getOffset();
     void setOffset(long offset);
 
-    void setPoolReference(MemoryPool pool);
+    long getSize();
+
+    default void recalculatePointer(long poolPointer) {}
+
+    default void markClosed() {}
+
+    default MemoryPool getPoolReference() {
+        return MemFix.sharedMemoryPool;
+    }
 }
