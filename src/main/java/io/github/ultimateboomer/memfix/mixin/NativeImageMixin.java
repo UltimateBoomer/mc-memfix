@@ -127,7 +127,11 @@ public class NativeImageMixin implements MemoryHandle {
     @Redirect(method = "*", at = @At(value = "FIELD",
             target = "Lnet/minecraft/client/texture/NativeImage;pointer:J", opcode = Opcodes.GETFIELD))
     private long onGetPointer(NativeImage image) {
-        return getPoolReference().getPoolPointer() + this.offset;
+        if (offset != -1) {
+            return getPoolReference().getPoolPointer() + this.offset;
+        } else {
+            return 0;
+        }
     }
 
     @Override

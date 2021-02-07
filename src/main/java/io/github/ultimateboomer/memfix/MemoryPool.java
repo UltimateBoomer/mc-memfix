@@ -1,12 +1,10 @@
 package io.github.ultimateboomer.memfix;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -59,27 +57,26 @@ public class MemoryPool {
     public synchronized void closeHandle(MemoryHandle handle) {
         if (this.handles.remove(handle)) {
             availableBlocks.add(Pair.of(handle.getSize(), handle.getOffset()));
-
-        } else {
-            throw new NoSuchElementException();
         }
     }
 
     public synchronized void resize() {
-        long oldSize = this.poolSize;
-        this.poolSize >>= 1;
-        MemFix.LOGGER.warn("Resizing pool to {} bytes", this.poolSize);
+        throw new OutOfMemoryError("Not enough memory for shared memory pool");
 
-        long old = this.poolPointer;
-        this.poolPointer = MemoryUtil.nmemRealloc(this.poolPointer, this.poolSize);
-
-        if (poolPointer != old) {
-            handles.forEach(handle -> handle.recalculatePointer(this.poolPointer));
-        }
-
-        for (long i = poolPointer + oldSize; i < poolPointer + poolSize; ++i) {
-            MemoryUtil.memPutByte(i, (byte) 0);
-        }
+//        long oldSize = this.poolSize;
+//        this.poolSize <<= 1;
+//        MemFix.LOGGER.warn("Resizing pool to {} bytes", this.poolSize);
+//
+//        long old = this.poolPointer;
+//        this.poolPointer = MemoryUtil.nmemRealloc(this.poolPointer, this.poolSize);
+//
+//        if (poolPointer != old) {
+//            handles.forEach(handle -> handle.recalculatePointer(this.poolPointer));
+//        }
+//
+//        for (long i = poolPointer + oldSize; i < poolPointer + poolSize; ++i) {
+//            MemoryUtil.memPutByte(i, (byte) 0);
+//        }
     }
 
     private synchronized long findAddress(long size) {
@@ -101,26 +98,27 @@ public class MemoryPool {
 
     public synchronized void compress() {
         MemFix.LOGGER.info("Compressing pool");
-        long offset = 0;
-        for (MemoryHandle handle : handles) {
-            if (handle.getOffset() != offset) {
-                MemoryStack stack = MemoryStack.stackPush();
-                long tmp = stack.nmalloc((int) handle.getSize());
-
-                MemoryUtil.memCopy(this.poolPointer + handle.getOffset(), tmp, handle.getSize());
-                MemoryUtil.memCopy(tmp, poolPointer + offset, handle.getSize());
-
-                handle.setOffset(offset);
-                handle.recalculatePointer(this.poolPointer);
-
-                stack.pop();
-
-            }
-            offset += handle.getSize();
-        }
-
-        availableBlocks.clear();
-        availableBlocks.add(Pair.of(poolSize - offset, offset));
+        throw new OutOfMemoryError("Not enough memory for shared memory pool");
+//        long offset = 0;
+//        for (MemoryHandle handle : handles) {
+//            if (handle.getOffset() != offset) {
+//                MemoryStack stack = MemoryStack.stackPush();
+//                long tmp = stack.nmalloc((int) handle.getSize());
+//
+//                MemoryUtil.memCopy(this.poolPointer + handle.getOffset(), tmp, handle.getSize());
+//                MemoryUtil.memCopy(tmp, poolPointer + offset, handle.getSize());
+//
+//                handle.setOffset(offset);
+//                handle.recalculatePointer(this.poolPointer);
+//
+//                stack.pop();
+//
+//            }
+//            offset += handle.getSize();
+//        }
+//
+//        availableBlocks.clear();
+//        availableBlocks.add(Pair.of(poolSize - offset, offset));
     }
 
     public synchronized void clear() {
@@ -153,5 +151,17 @@ public class MemoryPool {
 
     public long getPoolSize() {
         return poolSize;
+    }
+
+    public long getUsage() {
+        return availableBlocks.last().getRight();
+    }
+
+    public long getFill() {
+        return handles.stream().mapToLong(MemoryHandle::getSize).sum();
+    }
+
+    public int getHandleCount() {
+        return handles.size();
     }
 }

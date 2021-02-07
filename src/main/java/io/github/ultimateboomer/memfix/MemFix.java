@@ -49,7 +49,7 @@ public class MemFix implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        sharedMemoryPool = new MemoryPool(1L << 32);
+        sharedMemoryPool = new MemoryPool(12L << 30);
 
         KeyBinding keyDebug = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.memfix.test",
                 InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, "category.memfix"));
@@ -65,9 +65,16 @@ public class MemFix implements ModInitializer {
     public static void test(MinecraftClient client) {
 //        NativeImagePool.PooledNativeImage last = nativeImagePool.pooledNativeImageSet.last();
 //        exportTextures(client.runDirectory)
+//        sharedMemoryPool.compress();
 
         client.player.sendMessage(new LiteralText(
                 String.format("NativeImage count: %d", nativeImageList.size())), false);
+        client.player.sendMessage(new LiteralText(
+                String.format("Pool fill: %d", sharedMemoryPool.getFill())), false);
+        client.player.sendMessage(new LiteralText(
+                String.format("Pool usage: %d", sharedMemoryPool.getUsage())), false);
+        client.player.sendMessage(new LiteralText(
+                String.format("Pool handle count: %d", sharedMemoryPool.getHandleCount())), false);
 //        exportTextures(client.runDirectory);
     }
 
