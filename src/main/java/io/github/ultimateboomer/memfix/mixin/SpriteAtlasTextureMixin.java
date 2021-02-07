@@ -1,22 +1,10 @@
 package io.github.ultimateboomer.memfix.mixin;
 
-import io.github.ultimateboomer.memfix.MemFix;
-import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.SpriteAtlasTexture;
-import net.minecraft.util.Identifier;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
-import java.io.IOException;
-import java.io.InputStream;
-
-@Mixin(value = SpriteAtlasTexture.class, priority = 2000)
+@Mixin(value = {SpriteAtlasTexture.class}, priority = 2000)
 public class SpriteAtlasTextureMixin {
-    @Shadow @Final private Identifier id;
-
 //    @Inject(method = "stitch", at = @At("RETURN"))
 //    private void onStitch(CallbackInfoReturnable<SpriteAtlasTexture.Data> ci) {
 //        SpriteAtlasTexture.Data data = ci.getReturnValue();
@@ -35,10 +23,15 @@ public class SpriteAtlasTextureMixin {
 //        MemFix.dataMap.put(id, data);
 //    }
 
-    @Redirect(method = "loadSprite", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/texture/NativeImage;read(Ljava/io/InputStream;)" +
-                    "Lnet/minecraft/client/texture/NativeImage;"))
-    private NativeImage onReadNativeImage(InputStream inputStream) throws IOException {
-        return MemFix.nativeImagePool.read(NativeImage.Format.ABGR, inputStream);
-    }
+//    @Redirect(method = "*", at = @At(value = "INVOKE",
+//            target = "Lnet/minecraft/client/texture/NativeImage;read(Ljava/io/InputStream;)" +
+//                    "Lnet/minecraft/client/texture/NativeImage;"))
+//    private NativeImage onReadNativeImage(InputStream inputStream) throws IOException {
+////        NativeImage image = NativeImage.read(inputStream);
+////        MemFix.closeOnReload.add(image);
+////
+////        return image;
+//
+//        return MemFix.nativeImagePool.read(NativeImage.Format.ABGR, inputStream);
+//    }
 }
