@@ -22,6 +22,7 @@ public class MemoryPool {
     public MemoryPool(long initialSize) {
         this.poolSize = initialSize;
 
+        // Allocate
         this.poolPointer = MemoryUtil.nmemAlloc(this.poolSize);
         for (long i = this.poolPointer; i < this.poolPointer + this.poolSize; ++i) {
             MemoryUtil.memPutByte(i, (byte) 0);

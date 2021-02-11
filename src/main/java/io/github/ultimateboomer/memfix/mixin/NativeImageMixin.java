@@ -31,7 +31,7 @@ public class NativeImageMixin implements MemoryHandle {
     @Redirect(method = "<init>(Lnet/minecraft/client/texture/NativeImage$Format;IIZ)V",
             at = @At(value = "INVOKE", target = "Lorg/lwjgl/system/MemoryUtil;nmemAlloc(J)J"))
     private long onInit(long size) {
-        initImage(size, false, (byte) 0);
+        initImage(size, true, (byte) 0);
         return this.pointer;
     }
 
@@ -84,6 +84,7 @@ public class NativeImageMixin implements MemoryHandle {
 
     /**
      * @author UltimateBoomer
+     * @reason Delete STBImage pointer immediately after creation
      */
     @Overwrite
     public static NativeImage read(NativeImage.Format format, ByteBuffer buffer) throws IOException {
