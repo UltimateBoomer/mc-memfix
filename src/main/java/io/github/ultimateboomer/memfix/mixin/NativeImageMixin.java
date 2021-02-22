@@ -110,7 +110,7 @@ public class NativeImageMixin implements MemoryHandle {
                     image = new NativeImage(format == null ? NativeImage.Format.getFormat(f.get(0)) :
                             format, w.get(0), h.get(0), true);
 
-                    MemoryUtil.memCopy(imageAddress, MemFix.sharedMemoryPool.getPoolPointer() +
+                    MemoryUtil.memCopy(imageAddress, MemFix.getSharedMemoryPool().getPoolPointer() +
                             ((MemoryHandle) (Object) image).getOffset(), image.sizeBytes);
 
                     STBImage.stbi_image_free(imageBuffer);

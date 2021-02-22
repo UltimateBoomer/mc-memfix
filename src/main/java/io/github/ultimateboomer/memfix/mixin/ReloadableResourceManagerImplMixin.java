@@ -12,6 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class ReloadableResourceManagerImplMixin {
     @Inject(method = "beginReloadInner", at = @At("RETURN"))
     private void onReloadFinish(CallbackInfoReturnable<ResourceReloadMonitor> ci) {
-        MemFix.textureLoaded.set(true);
+        MemFix.getTextureLoaded().set(true);
     }
 }

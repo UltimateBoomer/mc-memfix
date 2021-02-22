@@ -2,6 +2,9 @@ package io.github.ultimateboomer.memfix;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.github.ultimateboomer.memfix.config.MemFixConfig;
+import me.sargunvohra.mcmods.autoconfig1u.AutoConfig;
+import me.sargunvohra.mcmods.autoconfig1u.serializer.GsonConfigSerializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -33,23 +36,28 @@ public class MemFix implements ModInitializer {
 
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
 
-    public static final Map<Identifier, SpriteAtlasTexture.Data> dataMap = Maps.newConcurrentMap();
+    private static MemFixConfig config;
+
+    private static final Map<Identifier, SpriteAtlasTexture.Data> dataMap = Maps.newConcurrentMap();
 
     public static final Set<NativeImage> nativeImageList = Sets.newConcurrentHashSet();
 
     public static final Set<NativeImage> closeOnReload = Sets.newConcurrentHashSet();
 
-    public static AtomicBoolean textureLoaded = new AtomicBoolean();
+    private static AtomicBoolean textureLoaded = new AtomicBoolean();
 
-    public static MemoryPool sharedMemoryPool;
+    private static MemoryPool sharedMemoryPool;
 
-    public static CompletableFuture<Void> exportImagesFuture = null;
+    private static CompletableFuture<Void> exportImagesFuture = null;
 
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss");
 
     @Override
     public void onInitialize() {
-        sharedMemoryPool = new MemoryPool(12L << 30);
+        AutoConfig.register(MemFixConfig.class, GsonConfigSerializer::new);
+        config = AutoConfig.getConfigHolder(MemFixConfig.class).getConfig();
+
+        sharedMemoryPool = new MemoryPool((long) config.poolSize << 20);
 
         KeyBinding keyDebug = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.memfix.test",
                 InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, "category.memfix"));
@@ -70,11 +78,11 @@ public class MemFix implements ModInitializer {
         client.player.sendMessage(new LiteralText(
                 String.format("NativeImage count: %d", nativeImageList.size())), false);
         client.player.sendMessage(new LiteralText(
-                String.format("Pool fill: %d", sharedMemoryPool.getFill())), false);
+                String.format("Pool fill: %d", getSharedMemoryPool().getFill())), false);
         client.player.sendMessage(new LiteralText(
-                String.format("Pool usage: %d", sharedMemoryPool.getUsage())), false);
+                String.format("Pool usage: %d", getSharedMemoryPool().getUsage())), false);
         client.player.sendMessage(new LiteralText(
-                String.format("Pool handle count: %d", sharedMemoryPool.getHandleCount())), false);
+                String.format("Pool handle count: %d", getSharedMemoryPool().getHandleCount())), false);
 //        exportTextures(client.runDirectory);
     }
 
@@ -106,5 +114,13 @@ public class MemFix implements ModInitializer {
             LOGGER.info("Export Complete");
         }, Util.getMainWorkerExecutor());
         return exportImagesFuture;
+    }
+
+    public static MemoryPool getSharedMemoryPool() {
+        return sharedMemoryPool;
+    }
+
+    public static AtomicBoolean getTextureLoaded() {
+        return textureLoaded;
     }
 }

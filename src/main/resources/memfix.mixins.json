@@ -4,7 +4,6 @@
   "package": "io.github.ultimateboomer.memfix.mixin",
   "compatibilityLevel": "JAVA_8",
   "client": [
-    "MipmapHelperMixin",
     "NativeImageMixin",
     "SpriteAtlasTextureMixin",
     "TextureManagerMixin"

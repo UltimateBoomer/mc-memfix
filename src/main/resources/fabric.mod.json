@@ -20,6 +20,9 @@
   "entrypoints": {
     "main": [
       "io.github.ultimateboomer.memfix.MemFix"
+    ],
+    "modmenu": [
+      "io.github.ultimateboomer.memfix.config.MemFixModMenu"
     ]
   },
   "mixins": [

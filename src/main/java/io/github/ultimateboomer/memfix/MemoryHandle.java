@@ -11,6 +11,6 @@ public interface MemoryHandle {
     default void markClosed() {}
 
     default MemoryPool getPoolReference() {
-        return MemFix.sharedMemoryPool;
+        return MemFix.getSharedMemoryPool();
     }
 }
